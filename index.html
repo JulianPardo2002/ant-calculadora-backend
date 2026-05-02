@@ -1,141 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Calendario Institucional - ANT</title>
-
-<style>
-    body {
-        font-family: 'Montserrat', 'Segoe UI', sans-serif;
-        background: url('ANT.png');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-        min-height: 100vh;
-    }
-
-    .card {
-        background: rgba(10, 30, 20, 0.7); 
-        backdrop-filter: blur(15px);
-        padding: 30px;
-        border-radius: 20px;
-        width: 380px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        color: #ffffff;
-    }
-
-    h2 { 
-        text-align: center; 
-        color: #f1c40f; 
-    }
-
-    label {
-        font-size: 10px;
-        font-weight: 700;
-        color: #bdc3c7;
-        margin-top: 15px;
-        display: block;
-    }
-
-    input, select, button {
-        width: 100%;
-        padding: 12px;
-        margin-top: 5px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.2);
-        font-size: 14px;
-        background: rgba(0, 0, 0, 0.3);
-        color: white;
-    }
-
-    button {
-        background: #1b5e20;
-        cursor: pointer;
-        font-weight: bold;
-        margin-top: 20px;
-    }
-
-    #resultado {
-        margin-top: 15px;
-        text-align: center;
-        padding: 12px;
-        border-radius: 10px;
-    }
-
-    .ok { background: rgba(40, 167, 69, 0.3); }
-    .error { background: rgba(220, 53, 69, 0.3); }
-
-    .controls { display: flex; gap: 8px; }
-    .nav-btn { width: 40px; }
-
-    #calendar {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 4px;
-        margin-top: 10px;
-    }
-
-    .day {
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        cursor: pointer;
-    }
-
-    .weekend { color: #ff7675; }
-    .holiday { color: #f1c40f; font-weight: bold; }
-    .selected { background: #f1c40f; color: black; }
-</style>
-</head>
-
-<body>
-
-<div class="card">
-    <h2>ANT CALENDARIO</h2>
-
-    <label>Tipo</label>
-    <select id="tipo" onchange="generarCalendario()">
-        <option value="habiles">Días Hábiles</option>
-        <option value="calendario">Días Calendario</option>
-    </select>
-
-    <div class="controls">
-        <button onclick="cambiarMes(-1)">‹</button>
-        <select id="monthSelector" onchange="cambiarMesRapido()">
-            <option value="0">Enero</option>
-            <option value="1">Febrero</option>
-            <option value="2">Marzo</option>
-            <option value="3">Abril</option>
-            <option value="4">Mayo</option>
-            <option value="5">Junio</option>
-            <option value="6">Julio</option>
-            <option value="7">Agosto</option>
-            <option value="8">Septiembre</option>
-            <option value="9">Octubre</option>
-            <option value="10">Noviembre</option>
-            <option value="11">Diciembre</option>
-        </select>
-        <select id="year" onchange="cambiarAño()"></select>
-        <button onclick="cambiarMes(1)">›</button>
-    </div>
-
-    <div id="calendar"></div>
-    <p id="fechaSeleccionada"></p>
-
-    <label>Días</label>
-    <input type="number" id="dias">
-
-    <button onclick="calcular()">CALCULAR</button>
-    <div id="resultado"></div>
-</div>
-
 <script>
 // 🔥 TU API REAL
 const API_URL = "https://calendario-api-wpy4.onrender.com";
@@ -150,9 +12,7 @@ async function cargarFestivos() {
         const res = await fetch(`${API_URL}/festivos`);
         const data = await res.json();
         festivos = data.map(f => f.fecha.split('T')[0]);
-    } catch (e) {
-        console.log("Error cargando festivos");
-    }
+    } catch (e) { console.log("Festivos no disponibles"); }
     generarCalendario();
 }
 
@@ -160,32 +20,31 @@ function cargarAnios() {
     const select = document.getElementById("year");
     for (let i = 2020; i <= 2035; i++) {
         const opt = document.createElement("option");
-        opt.value = i;
-        opt.innerText = i;
+        opt.value = i; opt.innerText = i;
         select.appendChild(opt);
     }
     select.value = anioActual;
 }
 
-function cambiarAño() {
-    anioActual = parseInt(document.getElementById("year").value);
-    generarCalendario();
-}
-
-function cambiarMesRapido() {
-    mesActual = parseInt(document.getElementById("monthSelector").value);
-    generarCalendario();
-}
+function cambiarAño() { anioActual = parseInt(document.getElementById("year").value); generarCalendario(); }
+function cambiarMesRapido() { mesActual = parseInt(document.getElementById("monthSelector").value); generarCalendario(); }
 
 function generarCalendario() {
     const calendar = document.getElementById("calendar");
+    const titulo = document.getElementById("tituloMes");
+    const monthSelector = document.getElementById("monthSelector");
     calendar.innerHTML = "";
+
+    const nombresMes = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    titulo.innerText = `${nombresMes[mesActual]} ${anioActual}`;
+    monthSelector.value = mesActual;
 
     let primerDia = new Date(anioActual, mesActual, 1).getDay();
     let offset = primerDia === 0 ? 6 : primerDia - 1;
 
     for (let s = 0; s < offset; s++) {
         const div = document.createElement("div");
+        div.className = "day empty";
         calendar.appendChild(div);
     }
 
@@ -202,17 +61,15 @@ function generarCalendario() {
 
         if (diaSemana >= 5) div.classList.add("weekend");
         if (festivos.includes(fechaStr)) div.classList.add("holiday");
+        if (fechaSeleccionada === fechaStr) div.classList.add("selected");
 
         div.onclick = () => {
+            const tipo = document.getElementById("tipo").value;
+            if (tipo === "habiles" && (diaSemana >= 5 || festivos.includes(fechaStr))) return;
             fechaSeleccionada = fechaStr;
-            document.getElementById("fechaSeleccionada").innerText = fechaStr;
+            document.getElementById("fechaSeleccionada").innerText = "Fecha base: " + fechaStr;
             generarCalendario();
         };
-
-        if (fechaSeleccionada === fechaStr) {
-            div.classList.add("selected");
-        }
-
         calendar.appendChild(div);
     }
 }
@@ -228,21 +85,28 @@ function cambiarMes(d) {
 async function calcular() {
     const dias = document.getElementById("dias").value;
     const tipo = document.getElementById("tipo").value;
+    const resultado = document.getElementById("resultado");
 
     if (!fechaSeleccionada || !dias) {
-        document.getElementById("resultado").innerText = "Completa datos";
+        resultado.innerHTML = "Complete los datos";
+        resultado.className = "error";
         return;
     }
 
-    const res = await fetch(`${API_URL}/calcular?fecha=${fechaSeleccionada}&dias=${dias}&tipo=${tipo}`);
-    const data = await res.json();
+    try {
+        const res = await fetch(`${API_URL}/calcular?fecha=${fechaSeleccionada}&dias=${dias}&tipo=${tipo}`);
+        const data = await res.json();
+        const f = new Date(data.resultado);
 
-    document.getElementById("resultado").innerText = "Resultado: " + data.resultado;
+        const out = `${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
+        resultado.innerHTML = "Vencimiento: " + out;
+        resultado.className = "ok";
+    } catch (e) {
+        resultado.innerHTML = "Error de servidor";
+        resultado.className = "error";
+    }
 }
 
 cargarAnios();
 cargarFestivos();
 </script>
-
-</body>
-</html>
