@@ -23,8 +23,9 @@ const conexion = mysql.createPool({
 // ========================================
 // RUTA PRINCIPAL
 // ========================================
-app.get('/', (req, res) => {
-    res.send('🚀 API Calendario Colombia funcionando');
+app.get("/", (req, res) => {
+    res.send("🚀 API Calendario Colombia funcionando");
+});
 });
 
 // ========================================
