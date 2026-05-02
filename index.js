@@ -1,4 +1,4 @@
-require('dotenv').config(); // 1. IMPORTANTE: Carga las variables de entorno
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -8,21 +8,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// EN LA NUBE - Cambié 'connection' a 'conexion' para que coincida con el resto de tu código
-const conexion = mysql.createConnection({
+// 🔥 Pool de conexiones (mejor que createConnection)
+const conexion = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT || 3306 // Puerto por defecto si no existe la variable
-});
-
-conexion.connect((error) => {
-    if (error) {
-        console.log('Error de conexión:', error);
-        return;
-    }
-    console.log('✅ Conectado a MySQL');
+  port: process.env.MYSQLPORT,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 // ========================================
@@ -40,6 +35,7 @@ app.get('/festivos', (req, res) => {
         "SELECT fecha FROM calendario WHERE es_festivo = 1",
         (error, resultados) => {
             if (error) {
+                console.error(error);
                 return res.status(500).json(error);
             }
             res.json(resultados);
@@ -92,9 +88,8 @@ app.get('/calcular', (req, res) => {
 });
 
 // ========================================
-// SERVIDOR - AJUSTE PARA RENDER
+// SERVIDOR
 // ========================================
-// Render asigna un puerto automáticamente, por eso usamos process.env.PORT
 const PUERTO = process.env.PORT || 3000;
 
 app.listen(PUERTO, () => {
