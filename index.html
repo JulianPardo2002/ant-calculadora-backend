@@ -1,50 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Calendario Institucional - ANT</title>
+
+<style>
+/* (TODO TU CSS SE QUEDA IGUAL, NO SE TOCA) */
+body {
+    font-family: 'Montserrat', 'Segoe UI', sans-serif;
+    background: url('ANT.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    min-height: 100vh;
+}
+
+.card {
+    background: rgba(10, 30, 20, 0.7); 
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    padding: 30px;
+    border-radius: 20px;
+    width: 380px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+h2 { text-align: center; margin-top: 0; color: #f1c40f; }
+
+label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #bdc3c7;
+    margin-top: 15px;
+    display: block;
+    text-transform: uppercase;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+button { background: #1b5e20; cursor: pointer; }
+button:hover { background: #2e7d32; }
+
+#calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.day { display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.weekend { color: #ff7675; }
+.holiday { color: #f1c40f; }
+.selected { background:#f1c40f; color:#000; }
+
+.week-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    margin-top: 15px;
+    color: #f1c40f;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>ANT CALENDARIO</h2>
+
+    <label>Tipo de Conteo</label>
+    <select id="tipo" onchange="generarCalendario()">
+        <option value="habiles">Días Hábiles</option>
+        <option value="calendario">Días Calendario</option>
+    </select>
+
+    <div class="controls">
+        <button onclick="cambiarMes(-1)">‹</button>
+
+        <select id="monthSelector" onchange="cambiarMesRapido()">
+            <option value="0">Enero</option><option value="1">Febrero</option>
+            <option value="2">Marzo</option><option value="3">Abril</option>
+            <option value="4">Mayo</option><option value="5">Junio</option>
+            <option value="6">Julio</option><option value="7">Agosto</option>
+            <option value="8">Septiembre</option><option value="9">Octubre</option>
+            <option value="10">Noviembre</option><option value="11">Diciembre</option>
+        </select>
+
+        <select id="year" onchange="cambiarAño()"></select>
+
+        <button onclick="cambiarMes(1)">›</button>
+    </div>
+
+    <h3 id="tituloMes"></h3>
+
+    <div class="week-header">
+        <div>LUN</div><div>MAR</div><div>MIE</div>
+        <div>JUE</div><div>VIE</div><div>SAB</div><div>DOM</div>
+    </div>
+
+    <div id="calendar"></div>
+    <p id="fechaSeleccionada"></p>
+
+    <input type="number" id="dias" placeholder="Ej. 15">
+    <button onclick="calcular()">CALCULAR</button>
+    <div id="resultado"></div>
+</div>
+
 <script>
-// 🔥 TU API REAL
+// 🔥 TU API
 const API_URL = "https://calendario-api-wpy4.onrender.com";
 
 let festivos = [];
-let fechaSeleccionada = null;
 let mesActual = new Date().getMonth();
 let anioActual = new Date().getFullYear();
 
+// 🔥 FECHA AUTOMÁTICA
+const hoy = new Date();
+let fechaSeleccionada = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+
+
+// ⚡ FESTIVOS CON CACHE
 async function cargarFestivos() {
+    const cache = localStorage.getItem("festivos");
+
+    if (cache) {
+        festivos = JSON.parse(cache);
+        generarCalendario();
+    }
+
     try {
         const res = await fetch(`${API_URL}/festivos`);
         const data = await res.json();
         festivos = data.map(f => f.fecha.split('T')[0]);
-    } catch (e) { console.log("Festivos no disponibles"); }
+        localStorage.setItem("festivos", JSON.stringify(festivos));
+    } catch (e) {
+        console.log("Festivos no disponibles");
+    }
+
     generarCalendario();
 }
 
+
+// 📅 AÑOS
 function cargarAnios() {
     const select = document.getElementById("year");
     for (let i = 2020; i <= 2035; i++) {
         const opt = document.createElement("option");
-        opt.value = i; opt.innerText = i;
+        opt.value = i;
+        opt.innerText = i;
         select.appendChild(opt);
     }
     select.value = anioActual;
 }
 
-function cambiarAño() { anioActual = parseInt(document.getElementById("year").value); generarCalendario(); }
-function cambiarMesRapido() { mesActual = parseInt(document.getElementById("monthSelector").value); generarCalendario(); }
 
+// 📆 CALENDARIO
 function generarCalendario() {
     const calendar = document.getElementById("calendar");
     const titulo = document.getElementById("tituloMes");
-    const monthSelector = document.getElementById("monthSelector");
+
     calendar.innerHTML = "";
 
     const nombresMes = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     titulo.innerText = `${nombresMes[mesActual]} ${anioActual}`;
-    monthSelector.value = mesActual;
+
+    // 🔥 MOSTRAR FECHA
+    document.getElementById("fechaSeleccionada").innerText = "Fecha base: " + fechaSeleccionada;
 
     let primerDia = new Date(anioActual, mesActual, 1).getDay();
     let offset = primerDia === 0 ? 6 : primerDia - 1;
 
     for (let s = 0; s < offset; s++) {
         const div = document.createElement("div");
-        div.className = "day empty";
         calendar.appendChild(div);
     }
 
@@ -66,47 +209,60 @@ function generarCalendario() {
         div.onclick = () => {
             const tipo = document.getElementById("tipo").value;
             if (tipo === "habiles" && (diaSemana >= 5 || festivos.includes(fechaStr))) return;
+
             fechaSeleccionada = fechaStr;
-            document.getElementById("fechaSeleccionada").innerText = "Fecha base: " + fechaStr;
             generarCalendario();
         };
+
         calendar.appendChild(div);
     }
 }
 
+
+// 🔄 CAMBIOS
 function cambiarMes(d) {
     mesActual += d;
     if (mesActual < 0) { mesActual = 11; anioActual--; }
     else if (mesActual > 11) { mesActual = 0; anioActual++; }
-    document.getElementById("year").value = anioActual;
     generarCalendario();
 }
 
+function cambiarMesRapido() {
+    mesActual = parseInt(document.getElementById("monthSelector").value);
+    generarCalendario();
+}
+
+function cambiarAño() {
+    anioActual = parseInt(document.getElementById("year").value);
+    generarCalendario();
+}
+
+
+// 🧮 CALCULAR
 async function calcular() {
     const dias = document.getElementById("dias").value;
     const tipo = document.getElementById("tipo").value;
-    const resultado = document.getElementById("resultado");
 
-    if (!fechaSeleccionada || !dias) {
-        resultado.innerHTML = "Complete los datos";
-        resultado.className = "error";
-        return;
-    }
+    const res = await fetch(`${API_URL}/calcular?fecha=${fechaSeleccionada}&dias=${dias}&tipo=${tipo}`);
+    const data = await res.json();
 
-    try {
-        const res = await fetch(`${API_URL}/calcular?fecha=${fechaSeleccionada}&dias=${dias}&tipo=${tipo}`);
-        const data = await res.json();
-        const f = new Date(data.resultado);
-
-        const out = `${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
-        resultado.innerHTML = "Vencimiento: " + out;
-        resultado.className = "ok";
-    } catch (e) {
-        resultado.innerHTML = "Error de servidor";
-        resultado.className = "error";
-    }
+    const f = new Date(data.resultado);
+    document.getElementById("resultado").innerText =
+        `Vencimiento: ${f.getDate()}/${f.getMonth()+1}/${f.getFullYear()}`;
 }
 
+
+// 🚀 INIT
 cargarAnios();
 cargarFestivos();
+
+
+// 🔥 ANTI-SLEEP
+setInterval(() => {
+    fetch(`${API_URL}/festivos`).catch(()=>{});
+}, 300000);
+
 </script>
+
+</body>
+</html>
