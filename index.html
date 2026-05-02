@@ -97,7 +97,7 @@ const API_URL = "https://calendario-api-wpy4.onrender.com";
 
 let festivos = [];
 
-// 🔥 FECHA ACTUAL REAL
+// 🔥 FECHA REAL
 const hoy = new Date();
 let mesActual = hoy.getMonth();
 let anioActual = hoy.getFullYear();
@@ -110,10 +110,13 @@ async function cargarFestivos() {
     try {
         const res = await fetch(`${API_URL}/festivos`);
         const data = await res.json();
+
         festivos = data.map(f => f.fecha.split('T')[0]);
+
     } catch (e) {
-        console.log("Error festivos");
+        console.log("Error cargando festivos");
     }
+
     generarCalendario();
 }
 
@@ -121,27 +124,30 @@ async function cargarFestivos() {
 // 🔥 AÑOS
 function cargarAnios() {
     const select = document.getElementById("year");
+    select.innerHTML = "";
+
     for (let i = 2020; i <= 2035; i++) {
-        let opt = document.createElement("option");
+        const opt = document.createElement("option");
         opt.value = i;
-        opt.text = i;
+        opt.innerText = i;
         select.appendChild(opt);
     }
+
     select.value = anioActual;
 }
 
 
 // 🔥 CALENDARIO
 function generarCalendario() {
-    const cal = document.getElementById("calendar");
+    const calendar = document.getElementById("calendar");
     const titulo = document.getElementById("tituloMes");
 
-    cal.innerHTML = "";
+    calendar.innerHTML = "";
 
-    const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-    titulo.innerText = `${meses[mesActual]} ${anioActual}`;
+    const nombresMes = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    titulo.innerText = `${nombresMes[mesActual]} ${anioActual}`;
 
-    // 🔥 FIX IMPORTANTE (mes correcto en selector)
+    // ✅ FIX: sincronizar selects SIEMPRE
     document.getElementById("monthSelector").value = mesActual;
     document.getElementById("year").value = anioActual;
 
@@ -151,23 +157,23 @@ function generarCalendario() {
     let offset = primerDia === 0 ? 6 : primerDia - 1;
 
     for (let i = 0; i < offset; i++) {
-        cal.innerHTML += "<div></div>";
+        calendar.innerHTML += "<div></div>";
     }
 
-    let diasMes = new Date(anioActual, mesActual+1, 0).getDate();
+    const diasMes = new Date(anioActual, mesActual + 1, 0).getDate();
 
-    for (let d = 1; d <= diasMes; d++) {
-        let fecha = new Date(anioActual, mesActual, d);
-        let fechaStr = `${anioActual}-${String(mesActual+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        let diaSemana = (fecha.getDay()+6)%7;
+    for (let i = 1; i <= diasMes; i++) {
+        const fecha = new Date(anioActual, mesActual, i);
+        const fechaStr = `${anioActual}-${String(mesActual+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+        const diaSemana = (fecha.getDay() + 6) % 7;
 
-        let clase = "day";
+        let clases = "day";
 
-        if (diaSemana >= 5) clase += " weekend";
-        if (festivos.includes(fechaStr)) clase += " holiday";
-        if (fechaSeleccionada === fechaStr) clase += " selected";
+        if (diaSemana >= 5) clases += " weekend";
+        if (festivos.includes(fechaStr)) clases += " holiday";
+        if (fechaSeleccionada === fechaStr) clases += " selected";
 
-        cal.innerHTML += `<div class="${clase}" onclick="seleccionar('${fechaStr}', ${diaSemana})">${d}</div>`;
+        calendar.innerHTML += `<div class="${clases}" onclick="seleccionar('${fechaStr}', ${diaSemana})">${i}</div>`;
     }
 }
 
@@ -204,14 +210,14 @@ function cambiarAño() {
 }
 
 
-// 🔥 CALCULAR (FIX NaN)
+// 🔥 CALCULAR (SIN ERROR)
 async function calcular() {
     const dias = document.getElementById("dias").value;
     const tipo = document.getElementById("tipo").value;
-    const out = document.getElementById("resultado");
+    const resultado = document.getElementById("resultado");
 
     if (!dias) {
-        out.innerText = "Ingrese días";
+        resultado.innerText = "Ingrese días";
         return;
     }
 
@@ -219,40 +225,39 @@ async function calcular() {
         const res = await fetch(`${API_URL}/calcular?fecha=${fechaSeleccionada}&dias=${dias}&tipo=${tipo}`);
         const data = await res.json();
 
-        if (!data.resultado) {
-            out.innerText = "Error en respuesta";
-            console.log(data);
+        console.log("RESPUESTA API:", data);
+
+        if (!data || !data.resultado) {
+            resultado.innerText = "Error en respuesta del servidor";
             return;
         }
 
         const f = new Date(data.resultado);
 
-        if (isNaN(f)) {
-            out.innerText = "Fecha inválida";
-            console.log(data.resultado);
+        if (isNaN(f.getTime())) {
+            resultado.innerText = "Fecha inválida";
             return;
         }
 
-        out.innerText = `Vencimiento: ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
+        resultado.innerText =
+            `Vencimiento: ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}/${f.getFullYear()}`;
 
     } catch (e) {
-        out.innerText = "Error servidor";
+        resultado.innerText = "Error de conexión";
         console.log(e);
     }
 }
 
 
-// 🚀 INICIO
+// 🚀 INIT (IMPORTANTE ORDEN)
 cargarAnios();
-cargarFestivos();
+generarCalendario(); // 👈 primero pinta con fecha actual
+cargarFestivos();    // 👈 luego mejora con festivos
 
 
-// 🔥 ANTI-SLEEP RENDER
-setInterval(()=>{
+// 🔥 ANTI-SLEEP
+setInterval(() => {
     fetch(`${API_URL}/festivos`).catch(()=>{});
-},300000);
+}, 300000);
 
 </script>
-
-</body>
-</html>
