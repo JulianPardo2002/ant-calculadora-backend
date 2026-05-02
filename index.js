@@ -8,7 +8,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 Pool de conexiones (mejor que createConnection)
+// ========================================
+// CONEXIÓN A MYSQL (RAILWAY)
+// ========================================
 const conexion = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -21,11 +23,10 @@ const conexion = mysql.createPool({
 });
 
 // ========================================
-// RUTA PRINCIPAL
+// RUTA PRINCIPAL (PRUEBA)
 // ========================================
 app.get("/", (req, res) => {
     res.send("🚀 API Calendario Colombia funcionando");
-});
 });
 
 // ========================================
@@ -36,8 +37,8 @@ app.get('/festivos', (req, res) => {
         "SELECT fecha FROM calendario WHERE es_festivo = 1",
         (error, resultados) => {
             if (error) {
-                console.error(error);
-                return res.status(500).json(error);
+                console.error("Error en /festivos:", error);
+                return res.status(500).json({ error: "Error en la consulta" });
             }
             res.json(resultados);
         }
@@ -58,13 +59,21 @@ app.get('/calcular', (req, res) => {
         });
     }
 
+    // 📅 Días calendario
     if (tipo === 'calendario') {
-        const consulta = `SELECT DATE_ADD(?, INTERVAL (? - 1) DAY) AS resultado`;
+        const consulta = `
+            SELECT DATE_ADD(?, INTERVAL (? - 1) DAY) AS resultado
+        `;
+
         conexion.query(consulta, [fecha, dias], (error, resultados) => {
-            if (error) return res.status(500).json(error);
+            if (error) {
+                console.error("Error en /calcular calendario:", error);
+                return res.status(500).json({ error: "Error en la consulta" });
+            }
             res.json(resultados[0]);
         });
     } 
+    // 📅 Días hábiles
     else if (tipo === 'habiles') {
         const consulta = `
             SELECT MAX(fecha) AS resultado
@@ -76,10 +85,14 @@ app.get('/calcular', (req, res) => {
                 AND es_festivo = 0
                 ORDER BY fecha
                 LIMIT ?
-            ) AS dias_habiles`;
+            ) AS dias_habiles
+        `;
 
         conexion.query(consulta, [fecha, dias], (error, resultados) => {
-            if (error) return res.status(500).json(error);
+            if (error) {
+                console.error("Error en /calcular habiles:", error);
+                return res.status(500).json({ error: "Error en la consulta" });
+            }
             res.json(resultados[0]);
         });
     } 
